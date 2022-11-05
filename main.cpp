@@ -55,6 +55,16 @@ int main(void)
 	MyClass* myClass = new MyClass();
 	delete myClass;
 
+    // Allocate MyClass array using fixed block allocator
+    MyClass* myClassArr = new MyClass[5];
+    delete [] myClassArr;
+
+    // Allocate raw memory using fixed block allocator then create
+    // MyClass with placement new
+    void* raw = xmalloc(sizeof(MyClass));
+    MyClass* myClassPlacement = new(raw) MyClass();
+    delete myClassPlacement;
+
 	void* memory1 = xmalloc(100);	
 	xfree(memory1);
 
