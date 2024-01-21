@@ -175,9 +175,9 @@ static inline void insert_allocator(Allocator* allocator)
 /// API is called. XallocInitDestroy constructor calls this function automatically. 
 extern "C" void xalloc_init()
 {
+#ifdef STATIC_POOLS
 	get_mutex().lock();
 
-#ifdef STATIC_POOLS
 	// For STATIC_POOLS mode, the allocators must be initialized before any other
 	// static user class constructor is run. Therefore, use placement new to initialize
 	// each allocator into the previously reserved static memory locations.
@@ -207,9 +207,9 @@ extern "C" void xalloc_init()
 	_allocators[9] = (Allocator*)&_allocator1024;
 	_allocators[10] = (Allocator*)&_allocator2048;
 	_allocators[11] = (Allocator*)&_allocator4096;
-#endif
 
 	get_mutex().unlock();
+#endif
 }
 
 /// Called one time when the application exits to cleanup any allocated memory.
