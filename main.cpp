@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "xallocator.h"
 #include "Fault.h"
 #include <new>

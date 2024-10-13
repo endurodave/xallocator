@@ -3,6 +3,8 @@ Replace malloc/free with xmalloc/xfree is faster than the global heap and preven
 
 Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1084801/Replace-malloc-free-with-a-Fast-Fixed-Block-Memory"><strong>Replace malloc/free with a Fast Fixed Block Memory Allocator</strong></a>
 
+<p><a href="https://www.cmake.org/">CMake</a>&nbsp;is used to create the build files. CMake is free and open-source software. Windows, Linux and other toolchains are supported. See the <strong>CMakeLists.txt </strong>file for more information.</p>
+
 <h2>Introduction</h2>
 
 <p>Custom fixed block allocators are specialized memory managers used to solve performance problems with the global heap. In the article &quot;<b><a href="http://www.codeproject.com/Articles/1083210/An-efficient-Cplusplus-fixed-block-memory-allocato">An Efficient C++ Fixed Block Memory Allocator</a></b>&quot;, I implemented an allocator class to improve speed and eliminate the possibility of a fragmented heap memory fault. In this latest article, the <code>Allocator</code> class is used as a basis for the <code>xallocator</code> implementation to replace <code>malloc()</code> and <code>free()</code>.</p>
