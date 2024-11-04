@@ -1,11 +1,33 @@
 # Replace malloc/free with a Fast Fixed Block Memory Allocator
 Replace malloc/free with xmalloc/xfree is faster than the global heap and prevents heap fragmentation faults.
 
+# Table of Contents
+
+- [Replace malloc/free with a Fast Fixed Block Memory Allocator](#replace-mallocfree-with-a-fast-fixed-block-memory-allocator)
+- [Table of Contents](#table-of-contents)
+- [Preface](#preface)
+- [Introduction](#introduction)
+- [Storage Recycling](#storage-recycling)
+- [Heap vs. Pool](#heap-vs-pool)
+- [xallocator](#xallocator)
+- [Overload new and delete](#overload-new-and-delete)
+- [Code Implementation](#code-implementation)
+- [Hiding the Allocator Pointer](#hiding-the-allocator-pointer)
+- [Porting Issues](#porting-issues)
+- [Reducing Slack](#reducing-slack)
+- [Allocator vs. xallocator](#allocator-vs-xallocator)
+- [Benchmarking](#benchmarking)
+- [Reference articles](#reference-articles)
+- [Conclusion](#conclusion)
+
+
+# Preface
+
 Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1084801/Replace-malloc-free-with-a-Fast-Fixed-Block-Memory"><strong>Replace malloc/free with a Fast Fixed Block Memory Allocator</strong></a>
 
 <p><a href="https://www.cmake.org/">CMake</a>&nbsp;is used to create the build files. CMake is free and open-source software. Windows, Linux and other toolchains are supported. See the <strong>CMakeLists.txt </strong>file for more information.</p>
 
-<h2>Introduction</h2>
+# Introduction
 
 <p>Custom fixed block allocators are specialized memory managers used to solve performance problems with the global heap. In the article &quot;<b><a href="http://www.codeproject.com/Articles/1083210/An-efficient-Cplusplus-fixed-block-memory-allocato">An Efficient C++ Fixed Block Memory Allocator</a></b>&quot;, I implemented an allocator class to improve speed and eliminate the possibility of a fragmented heap memory fault. In this latest article, the <code>Allocator</code> class is used as a basis for the <code>xallocator</code> implementation to replace <code>malloc()</code> and <code>free()</code>.</p>
 
@@ -13,7 +35,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 
 <p>In this article, I replace the C library <code>malloc</code>/<code>free</code> with alternative fixed memory block versions <code>xmalloc()</code> and <code>xfree()</code>. First, I&#39;ll briefly explain the underlying <code>Allocator</code> storage recycling method, then present how <code>xallocator</code> works.</p>
 
-<h2>Storage Recycling</h2>
+# Storage Recycling
 
 <p>The basic philosophy of the memory management scheme is to recycle memory obtained during object allocations. Once storage for an object has been created, it&#39;s never returned to the heap. Instead, the memory is recycled, allowing another object of the same type to reuse the space. I&#39;ve implemented a class called <code>Allocator</code> that expresses the technique.</p>
 
@@ -25,7 +47,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 	<li>Static pool</li>
 </ol>
 
-<h2>Heap vs. Pool</h2>
+# Heap vs. Pool
 
 <p>The <code>Allocator</code> class is capable of creating new blocks from the heap or a memory pool whenever the free-list cannot provide an existing one. If the pool is used, you must specify the number of objects up front. Using the total objects, a pool large enough to handle the maximum number of instances is created. Obtaining block memory from the heap, on the other hand, has no such quantity limitations &ndash; construct as many new objects as storage permits.</p>
 
@@ -48,7 +70,7 @@ public:
 
 <p>Refer to &quot;<b><a href="http://www.codeproject.com/Articles/1083210/An-efficient-Cplusplus-fixed-block-memory-allocato">An Efficient C++ Fixed Block Memory Allocator</a></b>&quot; for more information on <code>Allocator</code>.</p>
 
-<h2>xallocator</h2>
+# xallocator
 
 <p>The <code>xallocator</code> module has six main APIs:</p>
 
@@ -170,7 +192,7 @@ XallocDestroy::~XallocDestroy()
 
 <p>On a PC or similarly equipped high RAM system, this 1-byte is insignificant and in return ensures safe <code>xallocator</code> operation in <code>static</code> class instances during program exit. It also frees you from having to call <code>xalloc_init()</code> and<code> xalloc_destroy()</code> as this is handled automatically.&nbsp;</p>
 
-<h2>Overload new and delete</h2>
+# Overload new and delete
 
 <p>To make the <code>xallocator</code> really easy to use, I&#39;ve created a macro to overload the <code>new</code>/<code>delete</code> within a class and route the memory request to <code>xmalloc()</code>/<code>xfree()</code>. Just add the macro <code>XALLOCATOR</code> anywhere in your class definition.</p>
 
@@ -199,7 +221,7 @@ class GuiBase
 
 <p>Any <code>GuiBase</code> derived class (buttons, widgets, etc...)&nbsp;now uses&nbsp;<code>xallocator</code> when <code>new</code>/<code>delete</code> is called without having to add <code>XALLOCATOR</code>&nbsp;to every derived class. This is a powerful means to enable fixed block allocations for an entire hierarchy with a single macro statement.</p>
 
-<h2>Code Implementation</h2>
+# Code Implementation
 
 <p><code>xallocator</code> relies upon multiple <code>Allocator</code> instances to manage the fixed blocks; each <code>Allocator</code> instance handles one block size. Like <code>Allocator</code>, <code>xallocator</code> is designed to operate in heap blocks or static pool modes. The mode is controlled by the <code>STATIC_POOLS</code> define within <code>xallocator.cpp</code>.</p>
 
@@ -307,7 +329,7 @@ extern &quot;C&quot; void xalloc_destroy()
     lock_destroy();
 }</pre>
 
-<h2>Hiding the Allocator Pointer</h2>
+# Hiding the Allocator Pointer
 
 <p>When deleting memory, <code>xallocator</code> needs the original <code>Allocator</code> instance&nbsp;so the deallocation request can be routed to the correct <code>Allocator</code> instance for processing. Unlike <code>xmalloc()</code>, <code>xfree()</code> does not take a size and only uses a <code>void*</code> argument. Therefore, <code>xmalloc()</code> actually hides a pointer to the allocator&nbsp;within an unused portion of the memory block by adding an additional 4-bytes (typical <code>sizeof(Allocator*)</code>) to the request. The caller gets a pointer to the block&rsquo;s client region where the hidden allocator pointer&nbsp;is not overwritten.</p>
 
@@ -349,7 +371,7 @@ extern &quot;C&quot; void xfree(void* ptr)
 &nbsp;&nbsp; &nbsp;lock_release();
 }</pre>
 
-<h2>Porting Issues</h2>
+# Porting Issues
 
 <p>The <code>xallocator</code> is thread-safe when the locks are implemented for your target platform. The code provided has Windows locks. For other platforms, you&#39;ll need to provide lock implementations for the four functions within <em>xallocator.cpp</em>:</p>
 
@@ -373,7 +395,7 @@ static void lock_get()
     EnterCriticalSection(&amp;_criticalSection); 
 }</pre>
 
-<h2>Reducing Slack</h2>
+# Reducing Slack
 
 <p><code>xallocator</code> may return block sizes larger than the requested amount and the additional unused memory is called slack. For instance, for a request of 33 bytes, <code>xallocator</code> returns a block of 64 bytes. The additional memory (64 &ndash; (33 + 4) = 27 bytes) is slack and goes unused. Remember, if 33 bytes is requested an additional 4-bytes are required to hold the block size. So if a client requests 64-bytes, really the 128-byte allocator is used because 68-bytes are needed.</p>
 
@@ -409,7 +431,7 @@ xallocator Block Size: 16 Block Count: 2 Blocks In Use: 2
 xallocator Block Size: 8 Block Count: 1 Blocks In Use: 0
 xallocator Block Size: 32 Block Count: 1 Blocks In Use: 0</pre>
 
-<h2>Allocator vs. xallocator</h2>
+# Allocator vs. xallocator
 
 <p>The advantage of using <code>Allocator</code> is that the allocator block size exactly the size of the object and the minimum block size is only 4-bytes. The disadvantage is that the <code>Allocator</code> instance is <code>private</code> and only usable by that class. This means that the fixed block memory pool can&#39;t easily be shared with other instances of similarly sized blocks. This can waste storage due to the lack of sharing between memory pools.</p>
 
@@ -417,7 +439,7 @@ xallocator Block Size: 32 Block Count: 1 Blocks In Use: 0</pre>
 
 <p>An application can mix <code>Allocator</code> and <code>xallocator</code> usage in the same program to maximize efficient memory utilization as the designer sees fit.</p>
 
-<h2>Benchmarking</h2>
+# Benchmarking
 
 <p>Benchmarking the <code>xallocator</code> performance vs. the global heap on a Windows PC shows just how fast it is. An basic test of allocating and deallocating 20000 4096 and 2048 sized blocks in a somewhat interleaved fashion&nbsp;tests the speed improvement. All tests run with maximum compiler speed optimizations. See the attached source code for the exact algorithm.</p>
 
@@ -498,14 +520,14 @@ xallocator Block Size: 32 Block Count: 1 Blocks In Use: 0</pre>
 
 <p>As the benchmarking shows, the <code>xallocator</code> is highly efficient and about five times&nbsp;faster than the global heap on a Windows PC. On an&nbsp;ARM STM32F4 CPU built using a Keil compiler I&#39;ve see well over a 10x speed increase.&nbsp;</p>
 
-<h2>Reference articles</h2>
+# Reference articles
 
 <ul>
 	<li><a href="http://www.codeproject.com/Articles/1083210/An-Efficient-Cplusplus-Fixed-Block-Memory-Allocato"><strong>An Efficient C++ Fixed Block Memory Allocator</strong></a>&nbsp;by David Lafreniere</li>
 	<li><a href="http://www.codeproject.com/Articles/1089905/A-Custom-STL-std-allocator-Replacement-Improves-Pe"><strong>A Custom STL std::allocator Replacement Improves Performance</strong></a> by David Lafreniere</li>
 </ul>
 
-<h2>Conclusion</h2>
+# Conclusion
 
 <p>A medical device I worked on had a commercial GUI library that utilized the heap extensively. The size and frequency of the memory requests couldn&rsquo;t be predicted or controlled. Using the heap is such an uncontrolled fashion is a no-no on a medical device, so a solution was needed. Luckily, the GUI library had a means to replace <code>malloc()</code> and <code>free()</code> with our own custom implementation. <code>xallocator</code> solved the heap speed and fragmentation problem making the GUI framework a viable solution on that product.</p>
 
