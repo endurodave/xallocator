@@ -2,6 +2,7 @@
 #include "Fault.h"
 #include <new>
 #include <iostream>
+#include <string.h>
 
 // @see https://github.com/endurodave/xallocator
 // David Lafreniere
