@@ -1,4 +1,10 @@
+![License MIT](https://img.shields.io/github/license/BehaviorTree/BehaviorTree.CPP?color=blue)
+[![conan Ubuntu](https://github.com/endurodave/xallocator/actions/workflows/cmake_ubuntu.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/cmake_ubuntu.yml)
+[![conan Ubuntu](https://github.com/endurodave/xallocator/actions/workflows/cmake_clang.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/cmake_clang.yml)
+[![conan Windows](https://github.com/endurodave/xallocator/actions/workflows/cmake_windows.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/cmake_windows.yml)
+
 # Replace malloc/free with a Fast Fixed Block Memory Allocator
+
 Replace malloc/free with xmalloc/xfree is faster than the global heap and prevents heap fragmentation faults.
 
 # Table of Contents
