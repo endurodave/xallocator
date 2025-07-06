@@ -7,11 +7,13 @@
 
 Replace malloc/free with xmalloc/xfree is faster than the global heap and prevents heap fragmentation faults.
 
+Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1084801/Replace-malloc-free-with-a-Fast-Fixed-Block-Memory"><strong>Replace malloc/free with a Fast Fixed Block Memory Allocator</strong></a>
+
 # Table of Contents
 
 - [Replace malloc/free with a Fast Fixed Block Memory Allocator](#replace-mallocfree-with-a-fast-fixed-block-memory-allocator)
 - [Table of Contents](#table-of-contents)
-- [Preface](#preface)
+- [Getting Started](#getting-started)
 - [Introduction](#introduction)
 - [Storage Recycling](#storage-recycling)
 - [Heap vs. Pool](#heap-vs-pool)
@@ -27,11 +29,14 @@ Replace malloc/free with xmalloc/xfree is faster than the global heap and preven
 - [Conclusion](#conclusion)
 
 
-# Preface
+# Getting Started
 
-Originally published on CodeProject at: <a href="https://www.codeproject.com/Articles/1084801/Replace-malloc-free-with-a-Fast-Fixed-Block-Memory"><strong>Replace malloc/free with a Fast Fixed Block Memory Allocator</strong></a>
+[CMake](https://cmake.org/) is used to create the project build files on any C++ system including Windows, Linux, or an embedded system. 
 
-<p><a href="https://www.cmake.org/">CMake</a>&nbsp;is used to create the build files. CMake is free and open-source software. Windows, Linux and other toolchains are supported. See the <strong>CMakeLists.txt </strong>file for more information.</p>
+1. Clone the repository.
+2. From the repository root, run the following CMake command:   
+   `cmake -B Build .`
+3. Build and run the project within the `Build` directory. 
 
 # Introduction
 
