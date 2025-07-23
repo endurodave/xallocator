@@ -14,6 +14,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 - [Replace malloc/free with a Fast Fixed Block Memory Allocator](#replace-mallocfree-with-a-fast-fixed-block-memory-allocator)
 - [Table of Contents](#table-of-contents)
 - [Getting Started](#getting-started)
+- [References](#references)
 - [Introduction](#introduction)
 - [Storage Recycling](#storage-recycling)
 - [Heap vs. Pool](#heap-vs-pool)
@@ -37,6 +38,11 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 2. From the repository root, run the following CMake command:   
    `cmake -B Build .`
 3. Build and run the project within the `Build` directory. 
+
+# References
+
+* <a href="https://github.com/endurodave/Allocator">Allocator</a> - An efficient C++ fixed-block memory allocator.
+* <a href="https://github.com/endurodave/stl_allocator">stl_allocator</a> - A `std::allocator` compatible fixed-block memory allocator for use with the C++ Standard Library (`std::list`, `std::string`, `std::stringstream`, ...). 
 
 # Introduction
 
