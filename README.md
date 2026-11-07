@@ -22,6 +22,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 - [Overload new and delete](#overload-new-and-delete)
 - [Code Implementation](#code-implementation)
 - [Hiding the Allocator Pointer](#hiding-the-allocator-pointer)
+- [Out of Memory](#out-of-memory)
 - [Porting Issues](#porting-issues)
 - [Reducing Slack](#reducing-slack)
 - [Allocator vs. xallocator](#allocator-vs-xallocator)
@@ -37,7 +38,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 1. Clone the repository.
 2. From the repository root, run the following CMake command:   
    `cmake -B Build .`
-3. Build and run the project within the `Build` directory. 
+3. Build and run the project within the `Build` directory. `xallocator_app` runs the examples and benchmarks, then the unit tests in `UnitTests.cpp`, and exits non-zero if a test fails. 
 
 # References
 
@@ -82,7 +83,7 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 class Allocator
 {
 public:
-    Allocator(size_t size, UINT objects=0, CHAR* memory=NULL, const CHAR* name=NULL);
+    Allocator(size_t size, uint32_t objects=0, char* memory=NULL, const char* name=NULL);
 ...</pre>
 
 <p>Refer to &quot;<b><a href="http://www.codeproject.com/Articles/1083210/An-efficient-Cplusplus-fixed-block-memory-allocato">An Efficient C++ Fixed Block Memory Allocator</a></b>&quot; for more information on <code>Allocator</code>.</p>
@@ -259,22 +260,17 @@ class GuiBase
 <pre lang="c++">
 // Update this section as necessary if you want to use static memory pools.
 // See also xalloc_init() and xalloc_destroy() for additional updates required.
-#define MAX_ALLOCATORS    12
+// Block sizes are powers of two, so every block in a pool keeps the pool's
+// alignment. Blocks include the BLOCK_HEADER_SIZE header, so the largest
+// xmalloc() size is 4096 - BLOCK_HEADER_SIZE.
+#define MAX_ALLOCATORS    10
 #define MAX_BLOCKS        32
 
 // Create static storage for each static allocator instance
-CHAR* _allocator8 [sizeof(AllocatorPool&lt;CHAR[8], MAX_BLOCKS&gt;)];
-CHAR* _allocator16 [sizeof(AllocatorPool&lt;CHAR[16], MAX_BLOCKS&gt;)];
-CHAR* _allocator32 [sizeof(AllocatorPool&lt;CHAR[32], MAX_BLOCKS&gt;)];
-CHAR* _allocator64 [sizeof(AllocatorPool&lt;CHAR[64], MAX_BLOCKS&gt;)];
-CHAR* _allocator128 [sizeof(AllocatorPool&lt;CHAR[128], MAX_BLOCKS&gt;)];
-CHAR* _allocator256 [sizeof(AllocatorPool&lt;CHAR[256], MAX_BLOCKS&gt;)];
-CHAR* _allocator396 [sizeof(AllocatorPool&lt;CHAR[396], MAX_BLOCKS&gt;)];
-CHAR* _allocator512 [sizeof(AllocatorPool&lt;CHAR[512], MAX_BLOCKS&gt;)];
-CHAR* _allocator768 [sizeof(AllocatorPool&lt;CHAR[768], MAX_BLOCKS&gt;)];
-CHAR* _allocator1024 [sizeof(AllocatorPool&lt;CHAR[1024], MAX_BLOCKS&gt;)];
-CHAR* _allocator2048 [sizeof(AllocatorPool&lt;CHAR[2048], MAX_BLOCKS&gt;)];    
-CHAR* _allocator4096 [sizeof(AllocatorPool&lt;CHAR[4096], MAX_BLOCKS&gt;)];
+alignas(AllocatorPool&lt;char[8], MAX_BLOCKS&gt;) static char _allocator8 [sizeof(AllocatorPool&lt;char[8], MAX_BLOCKS&gt;)];
+alignas(AllocatorPool&lt;char[16], MAX_BLOCKS&gt;) static char _allocator16 [sizeof(AllocatorPool&lt;char[16], MAX_BLOCKS&gt;)];
+// ... 32, 64, 128, 256, 512, 1024, 2048 ...
+alignas(AllocatorPool&lt;char[4096], MAX_BLOCKS&gt;) static char _allocator4096 [sizeof(AllocatorPool&lt;char[4096], MAX_BLOCKS&gt;)];
 
 // Array of pointers to all allocator instances
 static Allocator* _allocators[MAX_ALLOCATORS];</pre>
@@ -284,38 +280,18 @@ static Allocator* _allocators[MAX_ALLOCATORS];</pre>
 <pre lang="c++">
 extern &quot;C&quot; void xalloc_init()
 {
-    lock_init();
-
 #ifdef STATIC_POOLS
+    get_mutex().lock();
+
     // For STATIC_POOLS mode, the allocators must be initialized before any other
     // static user class constructor is run. Therefore, use placement new to initialize
     // each allocator into the previously reserved static memory locations.
-    new (&amp;_allocator8) AllocatorPool&lt;CHAR[8], MAX_BLOCKS&gt;();
-    new (&amp;_allocator16) AllocatorPool&lt;CHAR[16], MAX_BLOCKS&gt;();
-    new (&amp;_allocator32) AllocatorPool&lt;CHAR[32], MAX_BLOCKS&gt;();
-    new (&amp;_allocator64) AllocatorPool&lt;CHAR[64], MAX_BLOCKS&gt;();
-    new (&amp;_allocator128) AllocatorPool&lt;CHAR[128], MAX_BLOCKS&gt;();
-    new (&amp;_allocator256) AllocatorPool&lt;CHAR[256], MAX_BLOCKS&gt;();
-    new (&amp;_allocator396) AllocatorPool&lt;CHAR[396], MAX_BLOCKS&gt;();
-    new (&amp;_allocator512) AllocatorPool&lt;CHAR[512], MAX_BLOCKS&gt;();
-    new (&amp;_allocator768) AllocatorPool&lt;CHAR[768], MAX_BLOCKS&gt;();
-    new (&amp;_allocator1024) AllocatorPool&lt;CHAR[1024], MAX_BLOCKS&gt;();
-    new (&amp;_allocator2048) AllocatorPool&lt;CHAR[2048], MAX_BLOCKS&gt;();
-    new (&amp;_allocator4096) AllocatorPool&lt;CHAR[4096], MAX_BLOCKS&gt;();
+    _allocators[0] = new (&amp;_allocator8) AllocatorPool&lt;char[8], MAX_BLOCKS&gt;();
+    _allocators[1] = new (&amp;_allocator16) AllocatorPool&lt;char[16], MAX_BLOCKS&gt;();
+    // ...
+    _allocators[9] = new (&amp;_allocator4096) AllocatorPool&lt;char[4096], MAX_BLOCKS&gt;();
 
-    // Populate allocator array with all instances 
-    _allocators[0] = (Allocator*)&amp;_allocator8;
-    _allocators[1] = (Allocator*)&amp;_allocator16;
-    _allocators[2] = (Allocator*)&amp;_allocator32;
-    _allocators[3] = (Allocator*)&amp;_allocator64;
-    _allocators[4] = (Allocator*)&amp;_allocator128;
-    _allocators[5] = (Allocator*)&amp;_allocator256;
-    _allocators[6] = (Allocator*)&amp;_allocator396;
-    _allocators[7] = (Allocator*)&amp;_allocator512;
-    _allocators[8] = (Allocator*)&amp;_allocator768;
-    _allocators[9] = (Allocator*)&amp;_allocator1024;
-    _allocators[10] = (Allocator*)&amp;_allocator2048;
-    _allocators[11] = (Allocator*)&amp;_allocator4096;
+    get_mutex().unlock();
 #endif
 }</pre>
 
@@ -324,16 +300,17 @@ extern &quot;C&quot; void xalloc_init()
 <pre lang="c++">
 extern &quot;C&quot; void xalloc_destroy()
 {
-    lock_get();
+    get_mutex().lock();
 
 #ifdef STATIC_POOLS
-    for (INT i=0; i&lt;MAX_ALLOCATORS; i++)
+    for (int i=0; i&lt;MAX_ALLOCATORS; i++)
     {
-        _allocators[i]-&gt;~Allocator();
+        if (_allocators[i])
+            _allocators[i]-&gt;~Allocator();
         _allocators[i] = 0;
     }
 #else
-    for (INT i=0; i&lt;MAX_ALLOCATORS; i++)
+    for (int i=0; i&lt;MAX_ALLOCATORS; i++)
     {
         if (_allocators[i] == 0)
             break;
@@ -342,28 +319,46 @@ extern &quot;C&quot; void xalloc_destroy()
     }
 #endif
 
-    lock_release();
-    lock_destroy();
+    get_mutex().unlock();
 }</pre>
 
 # Hiding the Allocator Pointer
 
-<p>When deleting memory, <code>xallocator</code> needs the original <code>Allocator</code> instance&nbsp;so the deallocation request can be routed to the correct <code>Allocator</code> instance for processing. Unlike <code>xmalloc()</code>, <code>xfree()</code> does not take a size and only uses a <code>void*</code> argument. Therefore, <code>xmalloc()</code> actually hides a pointer to the allocator&nbsp;within an unused portion of the memory block by adding an additional 4-bytes (typical <code>sizeof(Allocator*)</code>) to the request. The caller gets a pointer to the block&rsquo;s client region where the hidden allocator pointer&nbsp;is not overwritten.</p>
+<p>When deleting memory, <code>xallocator</code> needs the original <code>Allocator</code> instance&nbsp;so the deallocation request can be routed to the correct <code>Allocator</code> instance for processing. Unlike <code>xmalloc()</code>, <code>xfree()</code> does not take a size and only uses a <code>void*</code> argument. Therefore, <code>xmalloc()</code> hides a pointer to the allocator in a header at the start of the memory block. The caller gets a pointer to the block&rsquo;s client region just after the header, so the hidden allocator pointer&nbsp;is not overwritten.</p>
+
+<p>The header is <code>XALLOC_BLOCK_HEADER_SIZE</code> bytes: 16 on 64-bit systems and 8 on 32-bit systems, rather than just <code>sizeof(Allocator*)</code>. Blocks are aligned for any type (<code>std::max_align_t</code>, 16 bytes on 64-bit Linux), and a header of that size keeps the client region aligned too, so it can hold <code>long double</code> or SSE types.</p>
 
 <pre lang="C++">
 extern &quot;C&quot; void *xmalloc(size_t size)
 {
-&nbsp;&nbsp; &nbsp;lock_get();
+    Allocator* allocator = xallocator_get_allocator(size);
+    if (allocator == NULL)
+        return NULL;
 
-&nbsp;&nbsp; &nbsp;// Allocate a raw memory block&nbsp;
-&nbsp;&nbsp; &nbsp;Allocator* allocator = xallocator_get_allocator(size);
-&nbsp;&nbsp; &nbsp;void* blockMemoryPtr = allocator-&gt;Allocate(size);
+    // Reuse a freed block if there is one
+    get_mutex().lock();
+    void* blockMemoryPtr = allocator-&gt;Pop();
+    if (blockMemoryPtr != NULL)
+        allocator-&gt;AccountAlloc(false);
+    get_mutex().unlock();
 
-&nbsp;&nbsp; &nbsp;lock_release();
+    if (blockMemoryPtr == NULL)
+    {
+        // Get a new block from the heap outside the lock
+        blockMemoryPtr = new (std::nothrow) char[allocator-&gt;GetBlockSize()];
+        if (blockMemoryPtr != NULL)
+        {
+            get_mutex().lock();
+            allocator-&gt;AccountAlloc(true);
+            get_mutex().unlock();
+        }
+    }
 
-&nbsp;&nbsp; &nbsp;// Set the block Allocator* within the raw memory block region
-&nbsp;&nbsp; &nbsp;void* clientsMemoryPtr = set_block_allocator(blockMemoryPtr, allocator);
-&nbsp;&nbsp; &nbsp;return clientsMemoryPtr;
+    if (blockMemoryPtr == NULL)
+        return NULL;
+
+    // Set the block Allocator* within the raw memory block region
+    return set_block_allocator(blockMemoryPtr, allocator);
 }</pre>
 
 <p>When <code>xfree()</code> is called, the allocator pointer is extracted from the memory block so the correct <code>Allocator</code> instance can be called to deallocate the block.</p>
@@ -371,74 +366,45 @@ extern &quot;C&quot; void *xmalloc(size_t size)
 <pre lang="C++">
 extern &quot;C&quot; void xfree(void* ptr)
 {
-&nbsp;&nbsp; &nbsp;if (ptr == 0)
-&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;return;
+    if (ptr == 0)
+        return;
 
-&nbsp;&nbsp; &nbsp;// Extract the original allocator instance from the caller&#39;s block pointer
-&nbsp;&nbsp; &nbsp;Allocator* allocator = get_block_allocator(ptr);
+    // Extract the original allocator instance from the caller&#39;s block pointer
+    Allocator* allocator = get_block_allocator(ptr);
 
-&nbsp;&nbsp; &nbsp;// Convert the client pointer into the original raw block pointer
-&nbsp;&nbsp; &nbsp;void* blockPtr = get_block_ptr(ptr);
+    // Convert the client pointer into the original raw block pointer
+    void* blockPtr = get_block_ptr(ptr);
 
-&nbsp;&nbsp; &nbsp;lock_get();
+    get_mutex().lock();
 
-&nbsp;&nbsp; &nbsp;// Deallocate the block&nbsp;
-&nbsp;&nbsp; &nbsp;allocator-&gt;Deallocate(blockPtr);
+    // Deallocate the block 
+    allocator-&gt;Deallocate(blockPtr);
 
-&nbsp;&nbsp; &nbsp;lock_release();
+    get_mutex().unlock();
 }</pre>
+
+# Out of Memory
+
+<p>Like <code>malloc()</code>, <code>xmalloc()</code> returns <code>NULL</code> when it can&rsquo;t provide a block: the heap is out of memory, a <code>STATIC_POOLS</code> pool is exhausted or has no block that large, the size is too large to round up to a power of two, or all <code>MAX_ALLOCATORS</code> allocator slots are in use by other block sizes. The <code>XALLOCATOR</code> <code>operator new</code> overloads turn <code>NULL</code> into <code>std::bad_alloc</code> (or abort when exceptions are disabled), as the global <code>operator new</code> does; the <code>std::nothrow</code> form returns <code>NULL</code>.</p>
 
 # Porting Issues
 
-<p>The <code>xallocator</code> is thread-safe when the locks are implemented for your target platform. The code provided has Windows locks. For other platforms, you&#39;ll need to provide lock implementations for the four functions within <em>xallocator.cpp</em>:</p>
+<p><code>xallocator</code> is thread-safe: a single <code>std::mutex</code> guards the allocator table and each <code>Allocator</code>. For a target without <code>std::mutex</code>, replace <code>get_mutex()</code> in <em>xallocator.cpp</em> with the fastest OS lock available. If your system is single threaded, the lock can do nothing.</p>
 
-<ul>
-	<li><code>lock_init()</code></li>
-	<li><code>lock_get()</code></li>
-	<li><code>lock_release()</code></li>
-	<li><code>lock_destroy()</code></li>
-</ul>
+<p>The mutex is created on first use and intentionally never destroyed. <code>xallocator</code> may be called before <code>main()</code> and after it returns, from static constructors and destructors, so the lock must exist before any static object uses it and still exist when the last one is destroyed.</p>
 
-<p>When selecting a lock, use the fastest OS lock available to ensure <code>xallocator</code> operates as efficiently as possible within a multi-threaded environment. If your system is single threaded, then leave the implementation for each of the above functions empty.</p>
-
-<p>Depending on how <code>xallocator</code> is used, it may be called before <code>main()</code>. This means <code>lock_get()</code>/<code>lock_release()</code> can be called before <code>lock_init()</code>. Since the system is single threaded at this point, the locks aren&rsquo;t necessary until the OS kicks off. However, just make sure <code>lock_get()</code>/<code>lock_release()</code> behaves correctly if <code>lock_init()</code> isn&rsquo;t called first. For instance, the check for <code>_xallocInitialized</code> below ensures the correct behavior by skipping the lock until <code>lock_init()</code> is called.</p>
-
-<pre lang="C++">
-static void lock_get()
-{
-    if (_xallocInitialized == FALSE)
-        return;
-
-    EnterCriticalSection(&amp;_criticalSection); 
-}</pre>
+<p>New blocks are taken from the heap <em>outside</em> the lock. Holding it while calling the heap risks a lock-order deadlock with the C++ library&rsquo;s own heap locks.</p>
 
 # Reducing Slack
 
-<p><code>xallocator</code> may return block sizes larger than the requested amount and the additional unused memory is called slack. For instance, for a request of 33 bytes, <code>xallocator</code> returns a block of 64 bytes. The additional memory (64 &ndash; (33 + 4) = 27 bytes) is slack and goes unused. Remember, if 33 bytes is requested an additional 4-bytes are required to hold the block size. So if a client requests 64-bytes, really the 128-byte allocator is used because 68-bytes are needed.</p>
+<p><code>xallocator</code> may return block sizes larger than the requested amount and the additional unused memory is called slack. For instance, on a 64-bit system, a request of 33 bytes needs 49 bytes with the 16-byte header, so <code>xallocator</code> returns a 64-byte block. The additional memory (64 &ndash; 49 = 15 bytes) is slack and goes unused. So if a client requests 64 bytes, really the 128-byte allocator is used because 80 bytes are needed.</p>
 
-<p>Adding additional allocators to handle block sizes other than powers of two offers more block sizes to minimize waste. Run your application and profile your <code>xmalloc()</code> requested sizes with a bit of temporary debug code. Then add allocator block sizes for specifically handling those cases where a large number of blocks are being used.</p>
-
-<p>In the code below, an <code>Allocator</code> instance is created with a block size of 396 when a block between 257 and 396 is requested. Similarly, a block request of between 513 and 768 results in an <code>Allocator</code> to handle 768-byte blocks.</p>
+<p>Block sizes are always powers of two:</p>
 
 <pre lang="C++">
-// Based on the size, find the next higher powers of two value.
-// Add sizeof(size_t) to the requested block size to hold the size
-// within the block memory region. Most blocks are powers of two,
-// however some common allocator block sizes can be explicitly defined
-// to minimize wasted storage. This offers application specific tuning.
-size_t blockSize = size + sizeof(Allocator*);
-if (blockSize &gt; 256 &amp;&amp; blockSize &lt;= 396)
-&nbsp;&nbsp; &nbsp;blockSize = 396;
-else if (blockSize &gt; 512 &amp;&amp; blockSize &lt;= 768)
-&nbsp;&nbsp; &nbsp;blockSize = 768;
-else
-&nbsp;&nbsp; &nbsp;blockSize = nexthigher&lt;size_t&gt;(blockSize);</pre>
+size_t blockSize = nexthigher&lt;size_t&gt;(size + BLOCK_HEADER_SIZE);</pre>
 
-<p>With a minor amount of fine-tuning, you can reduce wasted storage due to slack based on your application&#39;s memory usage patterns. If no tuning is required and using blocks solely based on powers of two is acceptable, the only lines of code required from the snippet above are:</p>
-
-<pre lang="C++">
-size_t blockSize;
-blockSize = nexthigher&lt;size_t&gt;(size + sizeof(Allocator*));</pre>
+<p>Earlier versions also offered 396- and 768-byte blocks to reduce slack. They were removed: those sizes aren&rsquo;t multiples of the alignment, so in a <code>STATIC_POOLS</code> pool every block after the first was misaligned. To reduce slack, profile your <code>xmalloc()</code> request sizes and lower the sizes you request, or use an <code>Allocator</code> sized exactly for a heavily used type.</p>
 
 <p>Using <code>xalloc_stats()</code>, it&rsquo;s easy to find which allocators are being used the most.</p>
 

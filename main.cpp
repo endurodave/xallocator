@@ -1,5 +1,7 @@
 #include "xallocator.h"
 #include "Fault.h"
+#include "DataTypes.h"
+#include <cstdlib>
 #include <new>
 #include <iostream>
 #include <string.h>
@@ -29,8 +31,10 @@ static MyClassStatic myClassStatic;
 
 static void out_of_memory()
 {
-	// new-handler function called by Allocator when pool is out of memory
-	ASSERT();
+	// new-handler called when memory runs out. Allocate() retries after it
+	// returns, as operator new does, so it must free memory, throw or abort.
+	std::cerr << "out of memory" << std::endl;
+	std::abort();
 }
 
 static const int MAX_BLOCK_SIZE = 4000;
@@ -45,6 +49,8 @@ void Benchmark(const char* name, AllocFunc allocFunc, DeallocFunc deallocFunc);
 //------------------------------------------------------------------------------
 // _tmain
 //------------------------------------------------------------------------------
+int RunUnitTests();
+
 int main(void)
 {
 	srand(1);
@@ -90,7 +96,10 @@ int main(void)
 	// xalloc_destroy() automatically. Never call xalloc_destroy() manually except if
 	// using xallocator in a C-only application. 
 	//xalloc_destroy();
-	return 0;
+
+	// Unit tests (UnitTests.cpp), last: one fills the allocator table.
+	// Non-zero exit on failure.
+	return RunUnitTests() == 0 ? 0 : 1;
 }
 
 //------------------------------------------------------------------------------
