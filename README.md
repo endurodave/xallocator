@@ -1,7 +1,9 @@
-![License MIT](https://img.shields.io/github/license/BehaviorTree/BehaviorTree.CPP?color=blue)
+![License MIT](https://img.shields.io/github/license/endurodave/xallocator?color=blue)
 [![conan Ubuntu](https://github.com/endurodave/xallocator/actions/workflows/cmake_ubuntu.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/cmake_ubuntu.yml)
 [![conan Ubuntu](https://github.com/endurodave/xallocator/actions/workflows/cmake_clang.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/cmake_clang.yml)
 [![conan Windows](https://github.com/endurodave/xallocator/actions/workflows/cmake_windows.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/cmake_windows.yml)
+[![PlatformIO](https://github.com/endurodave/xallocator/actions/workflows/platformio.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/platformio.yml)
+[![RTOS Locks](https://github.com/endurodave/xallocator/actions/workflows/rtos_locks.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/rtos_locks.yml)
 
 # Replace malloc/free with a Fast Fixed Block Memory Allocator
 
@@ -11,24 +13,24 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 
 # Table of Contents
 
-- [Replace malloc/free with a Fast Fixed Block Memory Allocator](#replace-mallocfree-with-a-fast-fixed-block-memory-allocator)
-- [Table of Contents](#table-of-contents)
-- [Getting Started](#getting-started)
-- [References](#references)
-- [Introduction](#introduction)
-- [Storage Recycling](#storage-recycling)
-- [Heap vs. Pool](#heap-vs-pool)
-- [xallocator](#xallocator)
-- [Overload new and delete](#overload-new-and-delete)
-- [Code Implementation](#code-implementation)
-- [Hiding the Allocator Pointer](#hiding-the-allocator-pointer)
-- [Out of Memory](#out-of-memory)
-- [Porting Issues](#porting-issues)
-- [Reducing Slack](#reducing-slack)
-- [Allocator vs. xallocator](#allocator-vs-xallocator)
-- [Benchmarking](#benchmarking)
-- [Reference articles](#reference-articles)
-- [Conclusion](#conclusion)
+- [Replace malloc/free with a Fast Fixed Block Memory Allocator](https://github.com/endurodave/xallocator#replace-mallocfree-with-a-fast-fixed-block-memory-allocator)
+- [Table of Contents](https://github.com/endurodave/xallocator#table-of-contents)
+- [Getting Started](https://github.com/endurodave/xallocator#getting-started)
+- [References](https://github.com/endurodave/xallocator#references)
+- [Introduction](https://github.com/endurodave/xallocator#introduction)
+- [Storage Recycling](https://github.com/endurodave/xallocator#storage-recycling)
+- [Heap vs. Pool](https://github.com/endurodave/xallocator#heap-vs-pool)
+- [xallocator](https://github.com/endurodave/xallocator#xallocator)
+- [Overload new and delete](https://github.com/endurodave/xallocator#overload-new-and-delete)
+- [Code Implementation](https://github.com/endurodave/xallocator#code-implementation)
+- [Hiding the Allocator Pointer](https://github.com/endurodave/xallocator#hiding-the-allocator-pointer)
+- [Out of Memory](https://github.com/endurodave/xallocator#out-of-memory)
+- [Porting Issues](https://github.com/endurodave/xallocator#porting-issues)
+- [Reducing Slack](https://github.com/endurodave/xallocator#reducing-slack)
+- [Allocator vs. xallocator](https://github.com/endurodave/xallocator#allocator-vs-xallocator)
+- [Benchmarking](https://github.com/endurodave/xallocator#benchmarking)
+- [Reference articles](https://github.com/endurodave/xallocator#reference-articles)
+- [Conclusion](https://github.com/endurodave/xallocator#conclusion)
 
 
 # Getting Started
@@ -39,6 +41,24 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 2. From the repository root, run the following CMake command:   
    `cmake -B Build .`
 3. Build and run the project within the `Build` directory. `xallocator_app` runs the examples and benchmarks, then the unit tests in `UnitTests.cpp`, and exits non-zero if a test fails. 
+
+## PlatformIO
+
+`xallocator` is in the [PlatformIO registry](https://registry.platformio.org/libraries/endurodave/xallocator). Add it to your project's `platformio.ini`:
+
+```ini
+lib_deps = endurodave/xallocator@^1.1.0
+```
+
+Then `#include "xallocator.h"` and use `xmalloc()`/`xfree()` or the `XALLOCATOR` macro. The library needs C++11 and builds on any Arduino core with a C++ standard library (ESP32, STM32, RP2040, ...) and on the desktop (`platform = native`). 8-bit AVR boards are not supported. On an RTOS, add the lock option for your OS, e.g. `build_flags = -DXALLOC_LOCK_FREERTOS`; see [Porting Issues](https://github.com/endurodave/xallocator#porting-issues).
+
+The [xallocator-demo](https://github.com/endurodave/xallocator/tree/master/examples/platformio/xallocator-demo) example runs on ESP32, ESP32-C3, STM32 Nucleo-F401RE, STM32F4 Discovery (two FreeRTOS tasks sharing `xallocator` with `XALLOC_LOCK_FREERTOS`), Raspberry Pi Pico and the desktop:
+
+```shell
+cd examples/platformio/xallocator-demo
+pio run -e esp32dev -t upload -t monitor
+pio run -e native -t exec
+```
 
 # References
 
@@ -121,7 +141,7 @@ strcpy(memory2, &quot;TEST STRING&quot;);
 memory2 = (char*)xrealloc(memory2, 124);
 xfree(memory2);</pre>
 
-<p><code>xalloc_stats()</code> outputs allocator usage statistics to the standard output stream. The output provides insight into how many <code>Allocator</code> instances are being used, blocks in use, block sizes, and more.</p>
+<p><code>xalloc_stats()</code> outputs allocator usage statistics with <code>printf()</code>. The output provides insight into how many <code>Allocator</code> instances are being used, blocks in use, block sizes, and more.</p>
 
 <p><code>xalloc_init()</code> must be called one time before any worker threads start, or in the case of an embedded system, before the OS starts. On a C++ application, this function is called automatically for you. However, it is desirable to call <code>xalloc_init()</code> manually is some cases, typically on an embedded system to avoid the small memory overhead involved with the automatic <code>xalloc_init()</code>/<code>xalloc_destroy()</code> call mechanism.</p>
 
@@ -281,7 +301,7 @@ static Allocator* _allocators[MAX_ALLOCATORS];</pre>
 extern &quot;C&quot; void xalloc_init()
 {
 #ifdef STATIC_POOLS
-    get_mutex().lock();
+    XLockState lock = xlock();
 
     // For STATIC_POOLS mode, the allocators must be initialized before any other
     // static user class constructor is run. Therefore, use placement new to initialize
@@ -291,7 +311,7 @@ extern &quot;C&quot; void xalloc_init()
     // ...
     _allocators[9] = new (&amp;_allocator4096) AllocatorPool&lt;char[4096], MAX_BLOCKS&gt;();
 
-    get_mutex().unlock();
+    xunlock(lock);
 #endif
 }</pre>
 
@@ -300,7 +320,7 @@ extern &quot;C&quot; void xalloc_init()
 <pre lang="c++">
 extern &quot;C&quot; void xalloc_destroy()
 {
-    get_mutex().lock();
+    XLockState lock = xlock();
 
 #ifdef STATIC_POOLS
     for (int i=0; i&lt;MAX_ALLOCATORS; i++)
@@ -319,7 +339,7 @@ extern &quot;C&quot; void xalloc_destroy()
     }
 #endif
 
-    get_mutex().unlock();
+    xunlock(lock);
 }</pre>
 
 # Hiding the Allocator Pointer
@@ -336,11 +356,11 @@ extern &quot;C&quot; void *xmalloc(size_t size)
         return NULL;
 
     // Reuse a freed block if there is one
-    get_mutex().lock();
+    XLockState lock = xlock();
     void* blockMemoryPtr = allocator-&gt;Pop();
     if (blockMemoryPtr != NULL)
         allocator-&gt;AccountAlloc(false);
-    get_mutex().unlock();
+    xunlock(lock);
 
     if (blockMemoryPtr == NULL)
     {
@@ -348,9 +368,9 @@ extern &quot;C&quot; void *xmalloc(size_t size)
         blockMemoryPtr = new (std::nothrow) char[allocator-&gt;GetBlockSize()];
         if (blockMemoryPtr != NULL)
         {
-            get_mutex().lock();
+            XLockState lock2 = xlock();
             allocator-&gt;AccountAlloc(true);
-            get_mutex().unlock();
+            xunlock(lock2);
         }
     }
 
@@ -375,12 +395,12 @@ extern &quot;C&quot; void xfree(void* ptr)
     // Convert the client pointer into the original raw block pointer
     void* blockPtr = get_block_ptr(ptr);
 
-    get_mutex().lock();
+    XLockState lock = xlock();
 
     // Deallocate the block 
     allocator-&gt;Deallocate(blockPtr);
 
-    get_mutex().unlock();
+    xunlock(lock);
 }</pre>
 
 # Out of Memory
@@ -389,9 +409,26 @@ extern &quot;C&quot; void xfree(void* ptr)
 
 # Porting Issues
 
-<p><code>xallocator</code> is thread-safe: a single <code>std::mutex</code> guards the allocator table and each <code>Allocator</code>. For a target without <code>std::mutex</code>, replace <code>get_mutex()</code> in <em>xallocator.cpp</em> with the fastest OS lock available. If your system is single threaded, the lock can do nothing.</p>
+<p><code>xallocator</code> is thread-safe: a single lock guards the allocator table and each <code>Allocator</code>. The lock is held only for a table search and a free-list push or pop; new blocks come from the heap outside it. On an RTOS, a short critical section therefore suits it better than a mutex: no kernel object, no priority inversion, and it works before the scheduler starts and inside interrupts.</p>
 
-<p>The mutex is created on first use and intentionally never destroyed. <code>xallocator</code> may be called before <code>main()</code> and after it returns, from static constructors and destructors, so the lock must exist before any static object uses it and still exist when the last one is destroyed.</p>
+<p>The lock is selected at compile time. Define at most one option for the whole build (e.g. <code>build_flags</code> in <em>platformio.ini</em>, or <code>add_compile_definitions()</code> in CMake):</p>
+
+<table>
+	<tr><th>Option</th><th>Lock</th></tr>
+	<tr><td>(default)</td><td><code>std::mutex</code> when the C++ library provides it (Windows, Linux, macOS, ESP32); otherwise none</td></tr>
+	<tr><td><code>XALLOC_LOCK_FREERTOS</code></td><td>FreeRTOS critical section: <code>taskENTER_CRITICAL()</code>, or <code>taskENTER_CRITICAL_FROM_ISR()</code> inside an interrupt on Cortex-M; a <code>portENTER_CRITICAL_SAFE()</code> spinlock on ESP32. No lock before the scheduler starts.</td></tr>
+	<tr><td><code>XALLOC_LOCK_THREADX</code></td><td><code>tx_interrupt_control()</code> interrupt masking</td></tr>
+	<tr><td><code>XALLOC_LOCK_ZEPHYR</code></td><td><code>irq_lock()</code>/<code>irq_unlock()</code></td></tr>
+	<tr><td><code>XALLOC_LOCK_CMSIS_RTOS2</code></td><td>Cortex-M PRIMASK interrupt masking (CMSIS-Core), for any CMSIS-RTOS2 kernel</td></tr>
+	<tr><td><code>XALLOC_LOCK_USER</code></td><td>Your <code>extern &quot;C&quot; void xalloc_lock()</code> and <code>void xalloc_unlock()</code>. They may be called before <code>main()</code> and before the RTOS starts, so they must work then too.</td></tr>
+	<tr><td><code>XALLOC_LOCK_NONE</code></td><td>No lock, for single-threaded systems</td></tr>
+</table>
+
+<p>Bare-metal toolchains without threads support (e.g. <code>arm-none-eabi</code> as used by STM32duino and the Raspberry Pi Pico cores) have no <code>std::mutex</code>, so there the default is no lock: pick an RTOS option if <code>xallocator</code> is called from more than one task. In a <a href="https://github.com/DelegateMQ/DelegateMQ">DelegateMQ</a> build, <code>DMQ_THREAD_FREERTOS</code>, <code>DMQ_THREAD_THREADX</code>, <code>DMQ_THREAD_ZEPHYR</code> and <code>DMQ_THREAD_CMSIS_RTOS2</code> select the matching option automatically.</p>
+
+<p>Calling <code>xmalloc()</code>/<code>xfree()</code> from an interrupt is possible only in <code>STATIC_POOLS</code> mode (heap blocks mode calls <code>operator new</code>) with an interrupt-masking option: FreeRTOS on Cortex-M or ESP32, ThreadX, Zephyr or CMSIS-RTOS2.</p>
+
+<p>The <code>std::mutex</code> is created on first use and intentionally never destroyed. <code>xallocator</code> may be called before <code>main()</code> and after it returns, from static constructors and destructors, so the lock must exist before any static object uses it and still exist when the last one is destroyed.</p>
 
 <p>New blocks are taken from the heap <em>outside</em> the lock. Holding it while calling the heap risks a lock-order deadlock with the C++ library&rsquo;s own heap locks.</p>
 
