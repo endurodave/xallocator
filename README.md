@@ -47,10 +47,10 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 `xallocator` is in the [PlatformIO registry](https://registry.platformio.org/libraries/endurodave/xallocator). Add it to your project's `platformio.ini`:
 
 ```ini
-lib_deps = endurodave/xallocator@^1.1.0
+lib_deps = endurodave/xallocator@^1.2.0
 ```
 
-Then `#include "xallocator.h"` and use `xmalloc()`/`xfree()` or the `XALLOCATOR` macro. The library needs C++11 and builds on any Arduino core with a C++ standard library (ESP32, STM32, RP2040, ...) and on the desktop (`platform = native`). 8-bit AVR boards are not supported. On an RTOS, add the lock option for your OS, e.g. `build_flags = -DXALLOC_LOCK_FREERTOS`; see [Porting Issues](https://github.com/endurodave/xallocator#porting-issues).
+PlatformIO also installs [Allocator](https://registry.platformio.org/libraries/endurodave/Allocator), the fixed block allocator `xallocator` is built on. Then `#include "xallocator.h"` and use `xmalloc()`/`xfree()` or the `XALLOCATOR` macro. The library needs C++11 and builds on any Arduino core with a C++ standard library (ESP32, STM32, RP2040, ...) and on the desktop (`platform = native`). 8-bit AVR boards are not supported. On an RTOS, add the lock option for your OS, e.g. `build_flags = -DXALLOC_LOCK_FREERTOS`; see [Porting Issues](https://github.com/endurodave/xallocator#porting-issues).
 
 The [xallocator-demo](https://github.com/endurodave/xallocator/tree/master/examples/platformio/xallocator-demo) example runs on ESP32, ESP32-C3, STM32 Nucleo-F401RE, STM32F4 Discovery (two FreeRTOS tasks sharing `xallocator` with `XALLOC_LOCK_FREERTOS`), Raspberry Pi Pico and the desktop:
 

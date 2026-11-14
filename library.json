@@ -1,6 +1,6 @@
 {
   "name": "xallocator",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Fast fixed block memory allocator replacing malloc/free and new/delete. Prevents heap fragmentation; thread-safe; optional static pools for heap-free embedded systems.",
   "keywords": ["allocator", "memory", "memory pool", "fixed block", "malloc", "heap", "embedded", "cpp"],
   "repository": { "type": "git", "url": "https://github.com/endurodave/xallocator.git" },
@@ -10,9 +10,12 @@
   "frameworks": "*",
   "platforms": "*",
   "headers": "xallocator.h",
+  "dependencies": [
+    { "owner": "endurodave", "name": "Allocator", "version": "^1.1.0" }
+  ],
   "export": {
     "include": [
-      "xallocator.cpp", "xallocator.h", "Allocator.cpp", "Allocator.h",
+      "xallocator.cpp", "xallocator.h",
       "LICENSE", "README.md", "library.json",
       "examples/platformio/xallocator-demo/platformio.ini",
       "examples/platformio/xallocator-demo/src/main.cpp"
@@ -21,7 +24,7 @@
   "build": {
     "srcDir": ".",
     "includeDir": ".",
-    "srcFilter": ["-<*>", "+<xallocator.cpp>", "+<Allocator.cpp>"]
+    "srcFilter": ["-<*>", "+<xallocator.cpp>"]
   },
   "examples": [
     {
