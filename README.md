@@ -4,6 +4,7 @@
 [![conan Windows](https://github.com/endurodave/xallocator/actions/workflows/cmake_windows.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/cmake_windows.yml)
 [![PlatformIO](https://github.com/endurodave/xallocator/actions/workflows/platformio.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/platformio.yml)
 [![RTOS Locks](https://github.com/endurodave/xallocator/actions/workflows/rtos_locks.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/rtos_locks.yml)
+[![Arduino](https://github.com/endurodave/xallocator/actions/workflows/arduino.yml/badge.svg)](https://github.com/endurodave/xallocator/actions/workflows/arduino.yml)
 
 # Replace malloc/free with a Fast Fixed Block Memory Allocator
 
@@ -16,6 +17,8 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
 - [Replace malloc/free with a Fast Fixed Block Memory Allocator](https://github.com/endurodave/xallocator#replace-mallocfree-with-a-fast-fixed-block-memory-allocator)
 - [Table of Contents](https://github.com/endurodave/xallocator#table-of-contents)
 - [Getting Started](https://github.com/endurodave/xallocator#getting-started)
+  - [Arduino](https://github.com/endurodave/xallocator#arduino)
+  - [PlatformIO](https://github.com/endurodave/xallocator#platformio)
 - [References](https://github.com/endurodave/xallocator#references)
 - [Introduction](https://github.com/endurodave/xallocator#introduction)
 - [Storage Recycling](https://github.com/endurodave/xallocator#storage-recycling)
@@ -42,12 +45,18 @@ Originally published on CodeProject at: <a href="https://www.codeproject.com/Art
    `cmake -B Build .`
 3. Build and run the project within the `Build` directory. `xallocator_app` runs the examples and benchmarks, then the unit tests in `UnitTests.cpp`, and exits non-zero if a test fails. 
 
+The library is the `src` folder (`xallocator.cpp`, `xallocator.h`). The CMake build uses the copy of [Allocator](https://github.com/endurodave/Allocator) in the `allocator` folder; the desktop demo and unit tests are in `examples/desktop`.
+
+## Arduino
+
+`xallocator` is an Arduino library. In the Arduino IDE, install **xallocator** from the Library Manager (Sketch &rarr; Include Library &rarr; Manage Libraries); it installs [Allocator](https://github.com/endurodave/Allocator) with it. Then `#include <xallocator.h>` and see File &rarr; Examples &rarr; xallocator &rarr; xallocator_Demo. It needs a board with a full C++ standard library: UNO R4, Zero/MKR (SAMD), ESP32, RP2040, STM32 and similar; 8-bit AVR boards and the Due aren't supported. The lock is chosen automatically (`std::mutex` where the core has it, e.g. ESP32; none on single-threaded boards); the RTOS lock options are build flags, so they need PlatformIO.
+
 ## PlatformIO
 
 `xallocator` is in the [PlatformIO registry](https://registry.platformio.org/libraries/endurodave/xallocator). Add it to your project's `platformio.ini`:
 
 ```ini
-lib_deps = endurodave/xallocator@^1.2.0
+lib_deps = endurodave/xallocator@^1.3.0
 ```
 
 PlatformIO also installs [Allocator](https://registry.platformio.org/libraries/endurodave/Allocator), the fixed block allocator `xallocator` is built on. Then `#include "xallocator.h"` and use `xmalloc()`/`xfree()` or the `XALLOCATOR` macro. The library needs C++11 and builds on any Arduino core with a C++ standard library (ESP32, STM32, RP2040, ...) and on the desktop (`platform = native`). 8-bit AVR boards are not supported. On an RTOS, add the lock option for your OS, e.g. `build_flags = -DXALLOC_LOCK_FREERTOS`; see [Porting Issues](https://github.com/endurodave/xallocator#porting-issues).

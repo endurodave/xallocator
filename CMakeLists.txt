@@ -13,10 +13,16 @@ cmake_minimum_required(VERSION 3.10)
 project(xallocator VERSION 1.0 LANGUAGES CXX)
 
 # Collect all .cpp and *.h source files in the current directory
-file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/*.cpp" "${CMAKE_SOURCE_DIR}/*.h")
+# The library (src/, the Arduino library layout), the copy of Allocator it
+# builds on (allocator/), and the desktop demo and unit tests (examples/desktop)
+file(GLOB SOURCES
+    "${CMAKE_SOURCE_DIR}/src/*.cpp" "${CMAKE_SOURCE_DIR}/src/*.h"
+    "${CMAKE_SOURCE_DIR}/allocator/*.cpp" "${CMAKE_SOURCE_DIR}/allocator/*.h"
+    "${CMAKE_SOURCE_DIR}/examples/desktop/*.cpp" "${CMAKE_SOURCE_DIR}/examples/desktop/*.h")
 
 # Add an executable target
 add_executable(xallocator_app ${SOURCES})
+target_include_directories(xallocator_app PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/allocator ${CMAKE_SOURCE_DIR}/examples/desktop)
 
 
 

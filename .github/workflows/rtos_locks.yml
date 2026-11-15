@@ -1,6 +1,6 @@
 name: RTOS Locks
 
-# Compiles xallocator.cpp for Cortex-M4 with each RTOS lock option against the
+# Compiles src/xallocator.cpp (with the allocator/ copy of Allocator) for Cortex-M4 with each RTOS lock option against the
 # real vendor headers (compile only: no link, no run). XALLOC_LOCK_FREERTOS is
 # built and run by the PlatformIO workflow (env:disco_f407vg) instead.
 
@@ -55,9 +55,9 @@ jobs:
     - name: Compile
       run: |
         for mode in "" "-DSTATIC_POOLS"; do
-          arm-none-eabi-g++ xallocator.cpp Allocator.cpp \
+          arm-none-eabi-g++ src/xallocator.cpp allocator/Allocator.cpp \
             -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard \
             -std=gnu++11 -c -O2 -Wall -Wextra -Werror --specs=nano.specs -fno-exceptions \
             -D${{ matrix.lock }} -D__PROGRAM_START=1 $mode \
-            -I /tmp/threadx -I /tmp/cmsis
+            -I src -I allocator -I /tmp/threadx -I /tmp/cmsis
         done
